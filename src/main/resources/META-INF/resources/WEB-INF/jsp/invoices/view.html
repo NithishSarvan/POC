@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{base :: layout(~{::title}, ~{::section})}">
+<head>
+    <title>Invoice Details</title>
+    <style>
+        .invoice-header {
+            border-bottom: 2px solid #eee;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+        }
+        .invoice-status {
+            font-size: 1.2rem;
+        }
+        .invoice-actions {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+<section th:fragment="content">
+    <div class="card">
+        <div class="card-body">
+            <!-- Invoice Header -->
+            <div class="row invoice-header">
+                <div class="col-md-6">
+                    <h2>Invoice <span th:text="'#' + ${invoice.invoiceNumber}"></span></h2>
+                    <p class="text-muted" th:text="'Date: ' + ${#temporals.format(invoice.dateOfSupply, 'dd MMMM yyyy')}"></p>
+                </div>
+                <div class="col-md-6 text-right">
+                        <span class="invoice-status badge"
+                              th:classappend="${invoice.paid} ? 'badge-success' : 'badge-warning'"
+                              th:text="${invoice.paid} ? 'PAID' : 'PENDING'"></span>
+                    <p class="text-muted mt-2" th:text="'Created: ' + ${#temporals.format(invoice.createdAt, 'dd MMM yyyy HH:mm')}"></p>
+                </div>
+            </div>
+
+            <!-- Parties Information -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <h4>Seller</h4>
+                    <address>
+                        <strong th:text="${invoice.seller.name}"></strong><br>
+                        <span th:text="${invoice.seller.address}"></span><br>
+                        <span th:text="'GST: ' + ${invoice.seller.gstNumber}"></span><br>
+                        <span th:text="'State: ' + ${invoice.seller.state}"></span>
+                    </address>
+                </div>
+                <div class="col-md-6 text-right">
+                    <h4>Buyer</h4>
+                    <address>
+                        <strong th:text="${invoice.buyer.name}"></strong><br>
+                        <span th:text="${invoice.buyer.address}"></span><br>
+                        <span th:text="'GST: ' + ${invoice.buyer.gstNumber}"></span><br>
+                        <span th:text="'State: ' + ${invoice.buyer.state}"></span>
+                    </address>
+                </div>
+            </div>
+
+            <!-- Invoice Items -->
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Description</th>
+                        <th>HSN Code</th>
+                        <th class="text-right">Qty</th>
+                        <th class="text-right">Rate</th>
+                        <th class="text-right">Amount</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="item,iter : ${invoice.items}">
+                        <td th:text="${iter.count}"></td>
+                        <td th:text="${item.product.name}"></td>
+                        <td th:text="${item.product.hsnCode}"></td>
+                        <td class="text-right" th:text="${#numbers.formatDecimal(item.quantity, 1, 2, 'COMMA')}"></td>
+                        <td class="text-right" th:text="${#numbers.formatCurrency(item.rate)}"></td>
+                        <td class="text-right" th:text="${#numbers.formatCurrency(item.amount)}"></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Invoice Summary -->
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <h5>Notes</h5>
+                            <p th:text="${invoice.termsAndConditions} ?: 'No terms specified'"></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <tr>
+                                <th>Subtotal:</th>
+                                <td class="text-right" th:text="${#numbers.formatCurrency(invoice.totalBeforeTax)}"></td>
+                            </tr>
+                            <tr th:if="${invoice.cgstAmount > 0}">
+                                <th>CGST @ <span th:text="${invoice.cgstRate}"></span>%:</th>
+                                <td class="text-right" th:text="${#numbers.formatCurrency(invoice.cgstAmount)}"></td>
+                            </tr>
+                            <tr th:if="${invoice.sgstAmount > 0}">
+                                <th>SGST @ <span th:text="${invoice.sgstRate}"></span>%:</th>
+                                <td class="text-right" th:text="${#numbers.formatCurrency(invoice.sgstAmount)}"></td>
+                            </tr>
+                            <tr th:if="${invoice.igstAmount > 0}">
+                                <th>IGST @ <span th:text="${invoice.igstRate}"></span>%:</th>
+                                <td class="text-right" th:text="${#numbers.formatCurrency(invoice.igstAmount)}"></td>
+                            </tr>
+                            <tr class="table-active">
+                                <th>Total Amount:</th>
+                                <th class="text-right" th:text="${#numbers.formatCurrency(invoice.totalAfterTax)}"></th>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="alert alert-info">
+                        <strong>Amount in words:</strong>
+                        <span th:text="${invoice.amountInWords}"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="invoice-actions">
+                <a th:href="@{/invoices/{id}/print(id=${invoice.id})}"
+                   class="btn btn-primary" target="_blank">
+                    <i class="fas fa-print"></i> Print Invoice
+                </a>
+                <a th:href="@{/invoices/{id}/edit(id=${invoice.id})}"
+                   class="btn btn-secondary">
+                    <i class="fas fa-edit"></i> Edit Invoice
+                </a>
+                <button type="button" class="btn btn-danger float-right"
+                        onclick="confirmDelete()">
+                    <i class="fas fa-trash"></i> Delete Invoice
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Modal -->
+    <div th:replace="~{invoices/edit.html :: #deleteModal}"></div>
+</section>
+
+<script th:inline="javascript">
+    function confirmDelete() {
+        $('#deleteModal').modal('show');
+    }
+</script>
+</body>
+</html>

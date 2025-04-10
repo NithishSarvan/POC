@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Invoice <span th:text="'#' + ${invoice.invoiceNumber}"></span></title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            color: #333;
+            line-height: 1.6;
+        }
+        .invoice-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            border: 1px solid #eee;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .invoice-header {
+            text-align: center;
+            margin-bottom: 40px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 20px;
+        }
+        .invoice-title {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .invoice-details {
+            margin-bottom: 30px;
+        }
+        .parties {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+        .party {
+            width: 48%;
+        }
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        .items-table th, .items-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        .items-table th {
+            background-color: #f2f2f2;
+        }
+        .text-right {
+            text-align: right;
+        }
+        .summary {
+            margin-left: auto;
+            width: 50%;
+        }
+        .footer {
+            margin-top: 50px;
+            text-align: center;
+            font-size: 12px;
+            color: #777;
+        }
+        @media print {
+            body {
+                padding: 0;
+                font-size: 12pt;
+            }
+            .invoice-container {
+                border: none;
+                box-shadow: none;
+                padding: 0;
+            }
+            .no-print {
+                display: none;
+            }
+            .page-break {
+                page-break-after: always;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="invoice-container">
+    <!-- Header -->
+    <div class="invoice-header">
+        <div class="invoice-title">TAX INVOICE</div>
+        <div th:text="${invoice.seller.name}"></div>
+        <div th:text="${invoice.seller.address}"></div>
+        <div th:text="'GST: ' + ${invoice.seller.gstNumber}"></div>
+    </div>
+
+    <!-- Invoice Details -->
+    <div class="invoice-details">
+        <div style="display: flex; justify-content: space-between;">
+            <div>
+                <strong>Invoice #:</strong> <span th:text="${invoice.invoiceNumber}"></span><br>
+                <strong>Date:</strong> <span th:text="${#temporals.format(invoice.dateOfSupply, 'dd-MMM-yyyy')}"></span>
+            </div>
+            <div>
+                <strong>Buyer GST:</strong> <span th:text="${invoice.buyer.gstNumber}"></span><br>
+                <strong>State:</strong> <span th:text="${invoice.buyer.state}"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Parties -->
+    <div class="parties">
+        <div class="party">
+            <strong>Seller:</strong><br>
+            <span th:text="${invoice.seller.name}"></span><br>
+            <span th:text="${invoice.seller.address}"></span><br>
+            <span th:text="'GST: ' + ${invoice.seller.gstNumber}"></span>
+        </div>
+        <div class="party">
+            <strong>Buyer:</strong><br>
+            <span th:text="${invoice.buyer.name}"></span><br>
+            <span th:text="${invoice.buyer.address}"></span><br>
+            <span th:text="'GST: ' + ${invoice.buyer.gstNumber}"></span>
+        </div>
+    </div>
+
+    <!-- Items Table -->
+    <table class="items-table">
+        <thead>
+        <tr>
+            <th>#</th>
+            <th>Description</th>
+            <th>HSN Code</th>
+            <th class="text-right">Qty</th>
+            <th class="text-right">Rate</th>
+            <th class="text-right">Amount</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="item,iter : ${invoice.items}">
+            <td th:text="${iter.count}"></td>
+            <td th:text="${item.product.name}"></td>
+            <td th:text="${item.product.hsnCode}"></td>
+            <td class="text-right" th:text="${#numbers.formatDecimal(item.quantity, 1, 2, 'COMMA')}"></td>
+            <td class="text-right" th:text="${#numbers.formatCurrency(item.rate)}"></td>
+            <td class="text-right" th:text="${#numbers.formatCurrency(item.amount)}"></td>
+        </tr>
+        </tbody>
+    </table>
+
+    <!-- Summary -->
+    <div style="display: flex; justify-content: flex-end;">
+        <div class="summary">
+            <table style="width: 100%;">
+                <tr>
+                    <th>Subtotal:</th>
+                    <td class="text-right" th:text="${#numbers.formatCurrency(invoice.totalBeforeTax)}"></td>
+                </tr>
+                <tr th:if="${invoice.cgstAmount > 0}">
+                    <th>CGST @ <span th:text="${invoice.cgstRate}"></span>%:</th>
+                    <td class="text-right" th:text="${#numbers.formatCurrency(invoice.cgstAmount)}"></td>
+                </tr>
+                <tr th:if="${invoice.sgstAmount > 0}">
+                    <th>SGST @ <span th:text="${invoice.sgstRate}"></span>%:</th>
+                    <td class="text-right" th:text="${#numbers.formatCurrency(invoice.sgstAmount)}"></td>
+                </tr>
+                <tr th:if="${invoice.igstAmount > 0}">
+                    <th>IGST @ <span th:text="${invoice.igstRate}"></span>%:</th>
+                    <td class="text-right" th:text="${#numbers.formatCurrency(invoice.igstAmount)}"></td>
+                </tr>
+                <tr style="font-weight: bold; border-top: 2px solid #333;">
+                    <th>Total Amount:</th>
+                    <td class="text-right" th:text="${#numbers.formatCurrency(invoice.totalAfterTax)}"></td>
+                </tr>
+            </table>
+            <div style="margin-top: 20px; padding: 10px; background-color: #f5f5f5;">
+                <strong>Amount in words:</strong>
+                <span th:text="${invoice.amountInWords}"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Terms -->
+    <div style="margin-top: 40px;">
+        <h4>Terms & Conditions</h4>
+        <div style="border: 1px solid #eee; padding: 10px; min-height: 100px;"
+             th:text="${invoice.termsAndConditions} ?: 'No terms specified'"></div>
+    </div>
+
+    <!-- Signatures -->
+    <div style="display: flex; justify-content: space-between; margin-top: 80px;">
+        <div style="text-align: center; width: 45%;">
+            <div style="border-top: 1px solid #333; width: 200px; margin: 0 auto; padding-top: 5px;">
+                Buyer's Signature
+            </div>
+        </div>
+        <div style="text-align: center; width: 45%;">
+            <div style="border-top: 1px solid #333; width: 200px; margin: 0 auto; padding-top: 5px;">
+                Authorized Signatory
+            </div>
+            <div th:text="${invoice.seller.name}"></div>
+        </div>
+    </div>
+
+    <!-- Print Button -->
+    <div class="footer no-print">
+        <button onclick="window.print()" class="btn btn-primary">Print Invoice</button>
+        <button onclick="window.close()" class="btn btn-secondary">Close</button>
+    </div>
+</div>
+</body>
+</html>
